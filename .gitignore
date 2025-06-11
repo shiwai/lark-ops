@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# VSCode
+.vscode/
+
+# 环境/依赖
+.env
+*.env
+
+# 配置和密钥
+feishu_approval_export/config.py
+
+# 数据导出和缓存
+approval_export.csv
+output.html
+approval_jsons/
+approval_htmls/
+approval_jsons copy/
+approval_jsons.tgz
+
+# 其他
+*.log
+*.tmp
+.DS_Store 

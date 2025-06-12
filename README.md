@@ -37,7 +37,7 @@ pip install -r requirements.txt
 2. 运行以下命令导出审批流数据并自动生成HTML报告：
 
    ```bash
-   python main.py <开始时间戳(ms)> <结束时间戳(ms)> [导出文件名]
+   python main.py <开始时间戳(ms)> <结束时间戳(ms)
    # 示例
    python main.py 1735660800000 1751299200000
    ```

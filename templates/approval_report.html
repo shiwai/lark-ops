@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{ approval_name }} - {{ serial_number }}</title>
+  <style>
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #aaa; padding: 6px; }
+    th { background: #eee; }
+    h2, h3 { margin-top: 24px; }
+    .section-title { margin-top: 32px; font-size: 18px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>采购申请</h2>
+  <div>申请编号：{{ serial_number }}</div>
+  <br/>
+  <table>
+    <tr><th>申请人</th><td>{{ applicant_name }}</td><th>申请时间</th><td>{{ apply_time }}</td></tr>
+    <tr><th>所属部门</th><td>{{ department_name }}</td><th>审批状态</th><td>{{ status_cn }}</td></tr>
+  </table>
+  <div class="section-title">审批详情</div>
+  <table>
+    <tr><th>采购事由</th><td colspan="3">{{ reason }}</td></tr>
+    <tr><th>采购类别</th><td>{{ category }}</td><th>部门</th><td>{{ department_name }}</td></tr>
+    <tr><th>期望交付时间</th><td>{{ expect_time }}</td><th></th><td></td></tr>
+  </table>
+  <div class="section-title">费用明细</div>
+  <table>
+    <tr><th>名称</th><th>型号</th><th>数量</th><th>金额</th><th>发票</th><th>采购渠道</th><th>支付渠道</th></tr>
+    {% for item in fee_detail %}
+    <tr>
+      <td>{{ item.name }}</td>
+      <td>{{ item.model }}</td>
+      <td>{{ item.count }}</td>
+      <td>{{ item.amount }}</td>
+      <td>{{ item.invoice }}</td>
+      <td>{{ item.purchase_channel }}</td>
+      <td>{{ item.pay_channel }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <div class="section-title">审批记录</div>
+  <table>
+    <tr><th>节点</th><th>操作人</th><th>操作时间</th><th>状态</th><th>备注</th></tr>
+    {% for rec in approval_records %}
+    <tr>
+      <td>{{ rec.node_name }}</td>
+      <td>{{ rec.user_name }}</td>
+      <td>{{ rec.time }}</td>
+      <td>{{ rec.status_cn }}</td>
+      <td>{{ rec.comment or '' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% if global_comments %}
+  <div class="section-title">备注</div>
+  <ul>
+    {% for c in global_comments %}
+      <li>{{ c }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</body>
+</html>

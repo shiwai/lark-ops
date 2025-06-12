@@ -93,10 +93,12 @@ def render_approval_json_to_html(json_path, output_html):
                 'comment': '',
             })
     tpl = env.get_template('approval_report.html')
+    applicant_name = get_user_name(user_id=data.get('user_id'), open_id=data.get('open_id'))
+    serial_number = data['serial_number']
     html = tpl.render(
         approval_name=data['approval_name'],
-        serial_number=data['serial_number'],
-        applicant_name=get_user_name(user_id=data.get('user_id'), open_id=data.get('open_id')),
+        serial_number=serial_number,
+        applicant_name=applicant_name,
         apply_time=timestamp_to_str(data['start_time']),
         department_name=department,
         status=data['status'],
@@ -108,8 +110,10 @@ def render_approval_json_to_html(json_path, output_html):
         approval_records=approval_records,
         global_comments=global_comments,
     )
-    with open(output_html, 'w', encoding='utf-8') as f:
-        f.write(html)
+    if output_html is not None:
+        with open(output_html, 'w', encoding='utf-8') as f:
+            f.write(html)
+    return applicant_name, serial_number
 
 # # 示例调用
 # render_approval_json_to_html('approval_jsons/433B2B56-0EF7-4789-90C9-0F55B81FF342.json', 'output.html')

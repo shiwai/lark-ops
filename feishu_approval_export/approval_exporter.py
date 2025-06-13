@@ -4,6 +4,7 @@ from .feishu_api import FeishuAPI
 from .utils import timestamp_to_str
 import os
 import json
+import logging
 
 class ApprovalExporter:
     def __init__(self):
@@ -42,7 +43,7 @@ class ApprovalExporter:
                     user_id_name_map[user_id] = None  # 先占位
                 all_details.append(ins)
             else:
-                print(f'获取详情失败: {code}, 响应: {detail}')
+                logging.error(f'获取详情失败: {code}, 响应: {detail}')
 
         # 3. 批量获取用户名
         for uid in user_id_name_map.keys():
@@ -62,5 +63,5 @@ class ApprovalExporter:
                     timestamp_to_str(ins.get('end_time', 0)),
                     user_name
                 ])
-        print(f'导出完成，共{len(all_details)}条，文件：{output_file}')
-        print(f'所有审批流详情已保存到目录：{json_dir}') 
+        logging.info(f'导出完成，共{len(all_details)}条，文件：{output_file}')
+        logging.info(f'所有审批流详情已保存到目录：{json_dir}') 

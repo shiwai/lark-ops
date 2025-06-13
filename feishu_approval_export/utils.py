@@ -1,5 +1,6 @@
 import time
 import re
+import logging
 
 def timestamp_to_str(ts):
     if not ts:
@@ -32,4 +33,4 @@ def input_time(prompt):
             ts = str_to_timestamp(s)
             if ts:
                 return ts
-        print('时间格式错误，请输入形如 yyyy-mm-dd 或 yyyy-mm-dd hh:mm:ss 的时间！') 
+        logging.error('时间格式错误，请输入形如 yyyy-mm-dd 或 yyyy-mm-dd hh:mm:ss 的时间！') 

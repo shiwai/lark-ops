@@ -25,4 +25,7 @@ approval_jsons.tgz
 # 其他
 *.log
 *.tmp
-.DS_Store 
+.DS_Store
+
+logs/
+*.log 

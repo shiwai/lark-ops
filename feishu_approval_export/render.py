@@ -109,7 +109,15 @@ def render_approval_json_to_html(json_path, output_html, user_id_name_map=None):
     status_map = {'APPROVED': '已通过', 'REJECTED': '已拒绝', 'PENDING': '待审批', 'DONE': '已完成'}
     status_cn = status_map.get(data['status'], data['status'])
     # 收集全局备注
-    global_comments = [c.get('comment', '') for c in data.get('comment_list', []) if c.get('comment')]
+    global_comments = []
+    for c in data.get('comment_list', []):
+        if c.get('comment'):
+            user_id = c.get('user_id')
+            if user_id_name_map:
+                user_name = user_id_name_map.get(user_id, user_id)
+            else:
+                user_name = get_user_name(user_id=user_id, open_id=c.get('open_id'))
+            global_comments.append(f"{user_name}: {c.get('comment')}")
 
     # 审批记录
     approval_records = []

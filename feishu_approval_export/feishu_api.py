@@ -1,6 +1,7 @@
 import requests
 from . import config
 import json
+import logging
 
 class FeishuAPI:
     BASE_URL = 'https://open.feishu.cn/open-apis/'
@@ -41,16 +42,16 @@ class FeishuAPI:
         }
         if page_token:
             params['page_token'] = page_token
-        print("\n[飞书API请求] URL:", url)
-        print("[飞书API请求] Headers:", headers)
-        print("[飞书API请求] Params:", params)
+        logging.debug("[飞书API请求] URL: %s", url)
+        logging.debug("[飞书API请求] Headers: %s", headers)
+        logging.debug("[飞书API请求] Params: %s", params)
         resp = requests.get(url, headers=headers, params=params)
-        print("[飞书API响应] 状态码:", resp.status_code)
-        print("[飞书API响应] 完整URL:", resp.url)
+        logging.debug("[飞书API响应] 状态码: %d", resp.status_code)
+        logging.debug("[飞书API响应] 完整URL: %s", resp.url)
         try:
-            print("[飞书API响应] 内容:", json.dumps(resp.json(), ensure_ascii=False, indent=2))
+            logging.debug("[飞书API响应] 内容: %s", json.dumps(resp.json(), ensure_ascii=False, indent=2))
         except Exception:
-            print("[飞书API响应] 内容(非json):", resp.text)
+            logging.debug("[飞书API响应] 内容(非json): %s", resp.text)
         return resp.json()
 
     def get_approval_instance_detail(self, instance_code):
@@ -58,14 +59,13 @@ class FeishuAPI:
         headers = {
             'Authorization': f'Bearer {self.get_tenant_access_token()}'
         }
-        print(f"[飞书API请求] 获取详情: {url}")
+        logging.debug("[飞书API请求] 获取详情: %s", url)
         resp = requests.get(url, headers=headers)
-        print(f"[飞书API响应] 状态码: {resp.status_code}")
+        logging.debug("[飞书API响应] 状态码: %d", resp.status_code)
         try:
-            json.dumps(resp.json(), ensure_ascii=False, indent=2)
-            # print("[飞书API响应] 内容:", json.dumps(resp.json(), ensure_ascii=False, indent=2))
+            logging.debug("[飞书API响应] 内容: %s", json.dumps(resp.json(), ensure_ascii=False, indent=2))
         except Exception:
-            print("[飞书API响应] 内容(非json):", resp.text)
+            logging.debug("[飞书API响应] 内容(非json): %s", resp.text)
         return resp.json()
 
     def get_user_name_by_id(self, user_id):
@@ -74,7 +74,6 @@ class FeishuAPI:
             'Authorization': f'Bearer {self.get_tenant_access_token()}'
         }
         resp = requests.get(url, headers=headers)
-        # print(f"[用户信息API] 请求: {url}，状态码: {resp.status_code}，返回: {resp.text}")
         if resp.status_code == 200:
             data = resp.json()
             if data.get('code') == 0:
@@ -88,7 +87,7 @@ class FeishuAPI:
             'Authorization': f'Bearer {self.get_tenant_access_token()}'
         }
         resp = requests.get(url, headers=headers)
-        print(f"[用户信息API] 请求: {url}，状态码: {resp.status_code}，返回: {resp.text}")
+        logging.debug("[用户信息API] 请求: %s，状态码: %d，返回: %s", url, resp.status_code, resp.text)
         if resp.status_code == 200:
             data = resp.json()
             if data.get('code') == 0:

@@ -2,6 +2,9 @@ import json
 from jinja2 import Environment, FileSystemLoader
 from .feishu_api import FeishuAPI
 from .utils import timestamp_to_str
+import requests
+import os
+import logging
 
 env = Environment(loader=FileSystemLoader('templates'))
 api = FeishuAPI()
@@ -11,7 +14,57 @@ def get_user_name(user_id=None, open_id=None):
         return api.get_user_name_by_id(user_id)
     return ''
 
-def render_approval_json_to_html(json_path, output_html):
+def _parse_attachments(data, form):
+    attachments = []
+    serial_number = data.get('serial_number', '')
+    # 1. comment_list 里的附件
+    for comment in data.get('comment_list', []):
+        for file in comment.get('files', []):
+            title = file.get('title') or '附件'
+            url = file.get('url')
+            if url:
+                attachments.append({'name': f'{serial_number}-{title}', 'url': url})
+    # 2. form 里的附件
+    for item in form:
+        # 2.1 type为attachment/attachmentV2
+        if item.get('type') in ('attachment', 'attachmentV2'):
+            # attachmentV2: value为url列表，ext为逗号分隔的文件名
+            value = item.get('value')
+            ext = item.get('ext')
+            if isinstance(value, list):
+                # ext可能是逗号分隔的文件名
+                names = []
+                if ext and isinstance(ext, str):
+                    names = [x.strip() for x in ext.split(',')]
+                for idx, url in enumerate(value):
+                    if url:
+                        fname = names[idx] if idx < len(names) else f'附件{idx+1}'
+                        attachments.append({'name': f'{serial_number}-{fname}', 'url': url})
+            # attachment: value为对象列表
+            elif isinstance(value, list):
+                for file in value:
+                    title = file.get('title') or '附件'
+                    url = file.get('url')
+                    if url:
+                        attachments.append({'name': f'{serial_number}-{title}', 'url': url})
+    return attachments
+
+def _download_attachments(attachments, target_dir):
+    for att in attachments:
+        url = att['url']
+        fname = att['name']
+        path = os.path.join(target_dir, fname)
+        try:
+            resp = requests.get(url, timeout=30)
+            if resp.status_code == 200:
+                with open(path, 'wb') as f:
+                    f.write(resp.content)
+            else:
+                logging.error('[附件下载失败] %s 状态码: %d url: %s', fname, resp.status_code, url)
+        except Exception as e:
+            logging.error('[附件下载异常] %s 错误: %s url: %s', fname, str(e), url)
+
+def render_approval_json_to_html(json_path, output_html, user_id_name_map=None):
     with open(json_path, encoding='utf-8') as f:
         data = json.load(f)['data']
     form = json.loads(data['form'])
@@ -64,9 +117,13 @@ def render_approval_json_to_html(json_path, output_html):
     task_map = {}
     for t in data['task_list']:
         task_map[(t.get('user_id'), t.get('end_time'))] = t
+        if user_id_name_map:
+            user_name = user_id_name_map.get(t.get('user_id'), t.get('user_id'))
+        else:
+            user_name = get_user_name(user_id=t.get('user_id'), open_id=t.get('open_id'))
         approval_records.append({
             'node_name': t['node_name'],
-            'user_name': get_user_name(user_id=t.get('user_id'), open_id=t.get('open_id')),
+            'user_name': user_name,
             'time': timestamp_to_str(t['end_time']),
             'status': t['status'],
             'status_cn': status_map.get(t['status'], t['status']),
@@ -77,13 +134,21 @@ def render_approval_json_to_html(json_path, output_html):
         if tl.get('type') == 'PASS':
             # 匹配task_list中的审批节点
             for rec in approval_records:
-                if rec['user_name'] == get_user_name(user_id=tl.get('user_id'), open_id=tl.get('open_id')) and rec['time'] == timestamp_to_str(tl.get('create_time')):
+                if user_id_name_map:
+                    tl_name = user_id_name_map.get(tl.get('user_id'), tl.get('user_id'))
+                else:
+                    tl_name = get_user_name(user_id=tl.get('user_id'), open_id=tl.get('open_id'))
+                if rec['user_name'] == tl_name and rec['time'] == timestamp_to_str(tl.get('create_time')):
                     if tl.get('comment'):
                         rec['comment'] = tl.get('comment')
         elif tl.get('type') == 'CC':
             cc_names = []
             for cc in tl.get('cc_user_list', []):
-                cc_names.append(get_user_name(user_id=cc.get('user_id'), open_id=cc.get('open_id')))
+                if user_id_name_map:
+                    cc_name = user_id_name_map.get(cc.get('user_id'), cc.get('user_id'))
+                else:
+                    cc_name = get_user_name(user_id=cc.get('user_id'), open_id=cc.get('open_id'))
+                cc_names.append(cc_name)
             approval_records.append({
                 'node_name': '抄送',
                 'user_name': ', '.join(cc_names),
@@ -93,8 +158,19 @@ def render_approval_json_to_html(json_path, output_html):
                 'comment': '',
             })
     tpl = env.get_template('approval_report.html')
-    applicant_name = get_user_name(user_id=data.get('user_id'), open_id=data.get('open_id'))
+    user_id = data.get('user_id')
+    if user_id_name_map and user_id:
+        applicant_name = user_id_name_map.get(user_id, user_id)
+    else:
+        applicant_name = get_user_name(user_id=user_id, open_id=data.get('open_id'))
     serial_number = data['serial_number']
+    # 附件处理
+    attachments = _parse_attachments(data, form)
+    if output_html is not None and attachments:
+        # output_html: approval_htmls/人名/年份/serial_number/serial_number.html
+        serial_dir = os.path.dirname(output_html)
+        os.makedirs(serial_dir, exist_ok=True)
+        _download_attachments(attachments, serial_dir)
     html = tpl.render(
         approval_name=data['approval_name'],
         serial_number=serial_number,

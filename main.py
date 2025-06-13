@@ -45,7 +45,45 @@ def render_one(args):
     
     with open(json_path, encoding='utf-8') as f:
         data = json.load(f)['data']
+    
+    # 收集所有需要的user_id
+    user_ids = set()
+    
+    # 1. 申请人
     user_id = data.get('user_id')
+    if user_id:
+        user_ids.add(user_id)
+    
+    # 2. task_list中的审批人
+    for task in data.get('task_list', []):
+        task_user_id = task.get('user_id')
+        if task_user_id:
+            user_ids.add(task_user_id)
+    
+    # 3. timeline中的抄送人和审批人
+    for tl in data.get('timeline', []):
+        if tl.get('type') == 'CC':
+            for cc in tl.get('cc_user_list', []):
+                cc_user_id = cc.get('user_id')
+                if cc_user_id:
+                    user_ids.add(cc_user_id)
+        elif tl.get('type') == 'PASS':
+            tl_user_id = tl.get('user_id')
+            if tl_user_id:
+                user_ids.add(tl_user_id)
+    
+    # 4. 评论作者
+    for comment in data.get('comment_list', []):
+        comment_user_id = comment.get('user_id')
+        if comment_user_id:
+            user_ids.add(comment_user_id)
+            
+    # 确保所有user_id都在映射中
+    api = FeishuAPI()
+    for uid in user_ids:
+        if uid not in user_id_name_map:
+            user_id_name_map[uid] = api.get_user_name_by_id(uid)
+    
     applicant_name = user_id_name_map.get(user_id, user_id)
     serial_number = data['serial_number']
     

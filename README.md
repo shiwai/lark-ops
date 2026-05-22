@@ -1,28 +1,39 @@
 # 飞书审批流自动化导出工具
 
-本项目用于通过飞书开放平台自动化导出审批流数据，并支持多种格式的导出和可视化。
+本项目用于通过飞书开放平台导出指定审批流数据，并生成 CSV、JSON 和 HTML 归档文件。
 
 ## 主要功能
-- **自动批量导出审批流实例**：支持指定时间范围，自动分页获取所有审批流实例。
-- **审批流HTML可视化**：自动将所有JSON审批流详情渲染为美观的HTML文件，保存在`approval_htmls/`目录，便于浏览和归档。
-- **自定义审批流类型**：支持配置不同的审批流Code，适配多种导出场景， 如审批、用证用印等。
-- **可扩展模板**：支持自定义Jinja2模板，灵活调整审批流HTML展示样式。
+
+- **批量导出审批实例**：按指定时间范围分页获取审批实例列表，并拉取每条审批详情。
+- **导出结构化数据**：生成审批摘要 CSV，并将每条审批详情保存为 JSON。
+- **生成 HTML 报告**：将审批详情 JSON 渲染为 HTML，按申请人、年份和流水号归档到 `approval_htmls/`。
+- **用户名称展示**：调用飞书通讯录接口，将部分审批人、申请人和抄送人的 `user_id` 转换为姓名。
+- **本地配置审批流**：通过本地 `feishu_approval_export/config.py` 配置飞书应用凭证和审批流 Code。
+- **可扩展模板**：可修改 `templates/approval_report.html` 调整 HTML 报告样式。
 
 ## 目录结构
-```
+
+```text
 feishu_approval_export/
 ├── __init__.py
-├── config.py           # 配置文件，含token等信息
-├── feishu_api.py       # 封装飞书API的请求
-├── approval_exporter.py# 审批流导出逻辑
-├── render.py           # 审批流JSON转HTML渲染
-├── utils.py            # 工具函数
+├── approval_exporter.py  # 审批流导出逻辑
+├── feishu_api.py         # 飞书 API 请求封装
+├── render.py             # 审批详情 JSON 转 HTML
+└── utils.py              # 时间转换等工具函数
 templates/
-└── approval_report.html# 审批流HTML模板
-main.py                 # 启动脚本
-requirements.txt        # 依赖库
-approval_jsons/         # 审批流详情JSON文件输出目录
-approval_htmls/         # 审批流HTML文件输出目录
+└── approval_report.html  # HTML 报告模板
+main.py                   # 启动脚本
+requirements.txt          # Python 依赖
+```
+
+以下文件或目录为本地生成内容，已被 `.gitignore` 忽略：
+
+```text
+feishu_approval_export/config.py  # 本地密钥和审批流配置
+approval_export.csv               # 审批摘要 CSV
+approval_jsons/                   # 审批详情 JSON
+approval_htmls/                   # HTML 报告和附件归档
+logs/                             # 运行日志
 ```
 
 ## 安装依赖
@@ -31,25 +42,43 @@ approval_htmls/         # 审批流HTML文件输出目录
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
+## 配置
+
+创建本地配置文件 `feishu_approval_export/config.py`：
+
+```python
+APP_ID = "cli_xxx"
+APP_SECRET = "xxx"
+APPROVAL_CODE = "xxx"
+
+# 可留空，程序会通过 APP_ID 和 APP_SECRET 自动获取 tenant_access_token。
+TENANT_ACCESS_TOKEN = ""
+```
+
 ## 使用说明
 
-1. 在`feishu_approval_export/config.py`中填写你的飞书应用App ID、App Secret、审批流Code等信息。
-2. 运行以下命令导出审批流数据并自动生成HTML报告：
+运行脚本后按提示输入导出时间范围：
 
-   ```bash
-   python main.py <开始时间戳(ms)> <结束时间戳(ms)
-   # 示例
-   python main.py 1735660800000 1751299200000
-   ```
+```bash
+python main.py
+```
 
-   - 审批流关键信息将导出到`approval_export.csv`（或自定义文件名）。
-   - 审批流详情JSON文件保存在`approval_jsons/`目录。
-   - 审批流HTML报告保存在`approval_htmls/`目录。
+时间支持以下格式：
 
-3. 可根据需要自定义`templates/approval_report.html`模板，调整HTML报告样式。
+```text
+2025-01-01
+2025-01-01 00:00:00
+```
 
-4. 支持多种审批流类型，修改`config.py`中的`APPROVAL_CODE`即可切换。
+导出完成后会生成：
+
+- `approval_export.csv`：审批实例摘要。
+- `approval_jsons/<instance_code>.json`：审批详情原始 JSON。
+- `approval_htmls/<申请人>/<年份>/<流水号>/<流水号>.html`：HTML 审批报告。
+- `logs/<运行时间>.log`：运行日志。
+
+如需切换审批流类型，修改 `feishu_approval_export/config.py` 中的 `APPROVAL_CODE`。
 
 ## 参考文档
 
-- [飞书开放平台审批流接入指引](https://open.feishu.cn/document/server-docs/approval-v4/development-guide/native-approval-access-guide) 
+- [飞书开放平台审批流接入指引](https://open.feishu.cn/document/server-docs/approval-v4/development-guide/native-approval-access-guide)
